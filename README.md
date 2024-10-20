@@ -24,4 +24,4 @@ tree_id是二叉树的id，preorder_traversal_string是该二叉树的以先序�
 如4_2_1_0_#_#_#_3_#_#_8_7_#_#_11_#_#_
 
 其反序列化后为：
-![图一：树的结构](C:\Users\23679\Desktop\ubXv62gief-tMSWUrKylZQ)
+![图一：树的结构](https://github.com/EthanQC/using-cpp-and-MySQL-to-implement-the-visualization-of-a-binary-tree/blob/main/binary tree.jpeg)
