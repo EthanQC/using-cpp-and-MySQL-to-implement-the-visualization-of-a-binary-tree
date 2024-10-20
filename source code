@@ -1,0 +1,261 @@
+#include <jdbc/mysql_connection.h>
+#include <jdbc/mysql_driver.h>
+#include <jdbc/mysql_error.h>
+#include <jdbc/cppconn/statement.h>
+#include <jdbc/cppconn/prepared_statement.h>
+#include <jdbc/cppconn/resultset.h>
+#include <iostream>
+#include <memory>
+#include <sstream>
+#include <queue>
+#include <vector>
+#include <cmath>
+#include <algorithm>
+#include <string>
+
+class TreeNode
+{
+public:
+    TreeNode(int x) : val(x), left(nullptr), right(nullptr)
+    {
+
+    }
+    int val;
+    TreeNode* left;
+    TreeNode* right;
+};
+
+TreeNode* buildTree(std::queue<std::string>& nodes);
+
+TreeNode* deserialize(const std::string& data)
+{
+    std::stringstream ss(data);
+    std::string token;
+    std::queue<std::string> nodes;
+
+    // 将字符串按分隔符拆分
+    while (std::getline(ss, token, '_'))
+    {
+        if (!token.empty())
+        {
+            nodes.push(token);
+        }
+    }
+    return buildTree(nodes);
+}
+
+TreeNode* buildTree(std::queue<std::string>& nodes)
+{
+    if (nodes.empty())
+    {
+        return nullptr;
+    }
+    std::string val = nodes.front();
+    nodes.pop();
+
+    if (val == "#")
+    {
+        return nullptr;
+    }
+    else
+    {
+        int num = std::stoi(val);
+        TreeNode* node = new TreeNode(num);
+        node->left = buildTree(nodes);
+        node->right = buildTree(nodes);
+        return node;
+    }
+}
+
+int getTreeHeight(TreeNode* root)
+{
+    if (root == nullptr)
+    {
+        return 0;
+    }
+    return std::max(getTreeHeight(root->left), getTreeHeight(root->right)) + 1;
+}
+
+void printTreeWithEdges(TreeNode* root)
+{
+    if (root == nullptr)
+        return;
+
+    // 获取树的高度
+    int height = getTreeHeight(root);
+
+    // 每个节点之间的间隔（初始值）
+    int maxLevel = height;
+    int gap = std::pow(2, maxLevel);
+
+    // 创建一个队列，用于层序遍历
+    std::queue<TreeNode*> q;
+    q.push(root);
+
+    // 从第一层开始打印
+    for (int level = 1; level <= height; ++level)
+    {
+        int levelNodeCount = std::pow(2, level - 1); // 当前层的节点数
+        int spaceBefore = std::pow(2, height - level + 0) - 1; // 节点前的空格数
+        int spaceBetween = std::pow(2, height - level + 1) - 1; // 节点之间的空格数
+
+        // 打印当前层的节点
+        for (int i = 0; i < levelNodeCount; ++i)
+        {
+            TreeNode* node = q.front();
+            q.pop();
+
+            // 节点前的空格
+            if (i == 0)
+                std::cout << std::string(spaceBefore, ' ');
+            else
+                std::cout << std::string(spaceBetween, ' ');
+
+            if (node != nullptr)
+            {
+                std::cout << node->val;
+                q.push(node->left);
+                q.push(node->right);
+            }
+            else
+            {
+                std::cout << " ";
+                q.push(nullptr);
+                q.push(nullptr);
+            }
+        }
+        std::cout << std::endl;
+
+        // 打印连接线（除最后一层外）
+        if (level != height)
+        {
+            int edgeLines = std::pow(2, height - level - 1);
+            for (int k = 1; k <= edgeLines; ++k)
+            {
+                for (int i = 0; i < levelNodeCount; ++i)
+                {
+                    // 节点前的空格
+                    if (i == 0)
+                        std::cout << std::string(spaceBefore - k, ' ');
+                    else
+                        std::cout << std::string(spaceBetween - 2 * k, ' ');
+
+                    // 左连接线
+                    if (q.front() != nullptr)
+                        std::cout << "/";
+                    else
+                        std::cout << " ";
+
+                    // 节点之间的空格
+                    std::cout << std::string(2 * k - 1, ' ');
+
+                    // 右连接线
+                    if (q.front() != nullptr)
+                        std::cout << "\\";
+                    else
+                        std::cout << " ";
+                }
+                std::cout << std::endl;
+            }
+        }
+    }
+}
+
+
+// 释放二叉树内存
+void deleteTree(TreeNode* root)
+{
+    if (root == nullptr)
+    {
+        return;
+    }
+    deleteTree(root->left);
+    deleteTree(root->right);
+    delete root;
+}
+
+int main()
+{
+    try
+    {
+        // 获取驱动
+        sql::mysql::MySQL_Driver* driver = sql::mysql::get_mysql_driver_instance();
+
+        // 创建连接
+        std::unique_ptr<sql::Connection> conn(driver->connect("tcp://127.0.0.1:3306", "root", "your password"));
+
+        // 创建数据库
+        std::unique_ptr<sql::Statement> stmt(conn->createStatement());
+        stmt->execute("CREATE DATABASE IF NOT EXISTS binary_tree_database");
+
+        // 选择数据库
+        conn->setSchema("binary_tree_database");
+
+        // 删除表（如果已存在）
+        stmt->execute("DROP TABLE IF EXISTS binary_tree");
+
+        // 创建表，使用自增主键
+        stmt->execute(
+            "CREATE TABLE IF NOT EXISTS binary_tree ("
+            "tree_id INT AUTO_INCREMENT PRIMARY KEY, "
+            "preorder_traversal_string VARCHAR(255))"
+        );
+
+        // 插入数据
+        std::unique_ptr<sql::PreparedStatement> insert_into_list(conn->prepareStatement(
+            "INSERT INTO binary_tree (preorder_traversal_string) VALUES (?)"
+        ));
+        insert_into_list->setString(1, "4_2_1_0_#_#_#_3_#_#_8_7_#_#_11_#_#_");
+        insert_into_list->executeUpdate();
+
+        // 获取最后插入的 tree_id
+        std::unique_ptr<sql::Statement> id_stmt(conn->createStatement());
+        std::unique_ptr<sql::ResultSet> id_res(id_stmt->executeQuery("SELECT LAST_INSERT_ID() AS id"));
+        int last_id = 0;
+        if (id_res->next())
+        {
+            last_id = id_res->getInt("id");
+        }
+
+        // 查询数据
+        std::unique_ptr<sql::PreparedStatement> select_stmt(conn->prepareStatement(
+            "SELECT preorder_traversal_string FROM binary_tree WHERE tree_id = ?"
+        ));
+        select_stmt->setInt(1, last_id);
+
+        std::unique_ptr<sql::ResultSet> res(select_stmt->executeQuery());
+
+        // 获取结果并反序列化
+        if (res->next())
+        {
+            std::string traversal_string = res->getString("preorder_traversal_string");
+            TreeNode* root = deserialize(traversal_string);
+            // 可视化树（使用斜杠连接节点）
+            printTreeWithEdges(root);
+            // 释放内存
+            deleteTree(root);
+        }
+        else
+        {
+            std::cout << "没有找到指定的树数据。" << std::endl;
+        }
+
+    }
+    catch (const sql::SQLException& e)
+    {
+        std::cerr << "SQL异常: " << e.what() << std::endl;
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "标准异常: " << e.what() << std::endl;
+    }
+    catch (...)
+    {
+        std::cerr << "未知异常" << std::endl;
+    }
+
+    system("pause");
+
+    return 0;
+
+}
