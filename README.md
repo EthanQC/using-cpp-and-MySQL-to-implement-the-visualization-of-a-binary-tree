@@ -23,5 +23,16 @@ tree_id是二叉树的id，preorder_traversal_string是该二叉树的以先序�
 
 如4_2_1_0_#_#_#_3_#_#_8_7_#_#_11_#_#_
 
-其反序列化后为：
-![图一：树的结构](https://github.com/EthanQC/using-cpp-and-MySQL-to-implement-the-visualization-of-a-binary-tree/blob/main/binary tree.jpeg)
+其反序列化后为：（请查看binary tree.jpeg文件，我搞了好久都没能成功在这里显示这张图片，亟待学习啊啊啊）
+
+具体步骤、
+
+1、使用任何语言任何框架链接数据库，并传输数据到后端。
+
+2、处理数据，即构造二叉树的数据结构（写一段反序列化的函数将读入的字符串还原成二叉树）。
+
+3、实现二叉树的可视化
+
+达标：直接在控制台或cmd输出树的结构图。
+
+（达标效果图也请查看result.png文件）
